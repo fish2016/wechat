@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/xml"
-	"net/http"
-	"net/url"
+	//"net/http"
+	//"net/url"
 	"strconv"
 
+	"github.com/valyala/fasthttp"
 	"github.com/chanxuehong/wechat/internal/debug/callback"
 	"github.com/chanxuehong/wechat/internal/util"
 )
@@ -19,10 +20,11 @@ const (
 
 // Context 是 Handler 处理消息(事件)的上下文环境. 非并发安全!
 type Context struct {
-	ResponseWriter http.ResponseWriter
-	Request        *http.Request
+	/*ResponseWriter http.ResponseWriter
+	Request        *http.Request*/
+	HttpCtx *fasthttp.RequestCtx
 
-	QueryParams  url.Values // 回调请求 URL 的查询参数集合
+	QueryParams  *fasthttp.Args //url.Values // 回调请求 URL 的查询参数集合
 	EncryptType  string     // 回调请求 URL 的加密方式参数: encrypt_type
 	MsgSignature string     // 回调请求 URL 的消息体签名参数: msg_signature
 	Signature    string     // 回调请求 URL 的签名参数: signature
@@ -111,14 +113,15 @@ func (ctx *Context) MustGet(key string) interface{} {
 
 // NoneResponse 表示没有消息回复给微信服务器.
 func (ctx *Context) NoneResponse() (err error) {
-	_, err = ctx.ResponseWriter.Write(successResponseBytes)
+	//_, err = ctx.HttpCtx.Write(successResponseBytes)
+	ctx.HttpCtx.Write(successResponseBytes)
 	return
 }
 
 // RawResponse 回复明文消息给微信服务器.
 //  msg: 经过 encoding/xml.Marshal 得到的结果符合微信消息格式的任何数据结构
 func (ctx *Context) RawResponse(msg interface{}) (err error) {
-	return callback.XmlEncodeResponseMessage(ctx.ResponseWriter, msg)
+	return callback.XmlEncodeResponseMessage(ctx.HttpCtx.Response.BodyWriter(), msg)
 }
 
 // stringWriter is the interface that wraps the WriteString method.
@@ -152,7 +155,7 @@ func (ctx *Context) AESResponse(msg interface{}, timestamp int64, nonce string, 
 	timestampString := strconv.FormatInt(timestamp, 10)
 	msgSignature := util.MsgSign(ctx.Token, timestampString, nonce, base64EncryptedMsg)
 
-	if sw, ok := ctx.ResponseWriter.(stringWriter); ok {
+	if sw, ok := ctx.HttpCtx.Response.BodyWriter().(stringWriter); ok {  //:dengjin:强制转换stringWrite
 		if _, err = sw.WriteString("<xml><Encrypt>"); err != nil {
 			return
 		}
@@ -174,13 +177,13 @@ func (ctx *Context) AESResponse(msg interface{}, timestamp int64, nonce string, 
 		if _, err = sw.WriteString("</TimeStamp><Nonce>"); err != nil {
 			return
 		}
-		if err = xml.EscapeText(ctx.ResponseWriter, []byte(nonce)); err != nil {
+		if err = xml.EscapeText(ctx.HttpCtx.Response.BodyWriter(), []byte(nonce)); err != nil {
 			return
 		}
 		_, err = sw.WriteString("</Nonce></xml>")
 		return
 	} else {
-		bufw := bufio.NewWriterSize(ctx.ResponseWriter, 256)
+		bufw := bufio.NewWriterSize(ctx.HttpCtx.Response.BodyWriter(), 256)
 		if _, err = bufw.WriteString("<xml><Encrypt>"); err != nil {
 			return
 		}

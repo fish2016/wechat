@@ -65,10 +65,18 @@ type MixedMsg struct {
 	*account        // account
 	*dkf            // dkf
 	*poi            // poi
-	*card           // card
+	//*card           // card
 	*bizwifi        // bizwifi
 	*file           // MsgType is file
 
+	Card *struct {
+		CardId string  `xml:"CardId"     json:"CardId"`
+		UserCardCode string  `xml:"UserCardCode"     json:"UserCardCode"`
+		TransId  int  `xml:"TransId"     json:"TransId"`
+		LocationId  int  `xml:"LocationId"     json:"LocationId"`
+		Fee  string  `xml:"Fee"     json:"Fee"`
+		OriginalFee  string  `xml:"OriginalFee"     json:"OriginalFee"`
+	}
 	// shakearound
 	ChosenBeacon *struct {
 		UUID     string  `xml:"Uuid"     json:"Uuid"`

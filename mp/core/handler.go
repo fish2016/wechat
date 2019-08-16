@@ -54,7 +54,8 @@ func (mux *ServeMux) ServeMsg(ctx *Context) {
 	if MsgType := ctx.MixedMsg.MsgType; MsgType != "event" {
 		handlers := mux.getMsgHandlerChain(MsgType)
 		if len(handlers) == 0 {
-			ctx.ResponseWriter.Write(successResponseBytes)
+			//ctx.ResponseWriter.Write(successResponseBytes)
+			ctx.HttpCtx.Write(successResponseBytes)
 			return
 		}
 		ctx.handlers = handlers
@@ -62,7 +63,8 @@ func (mux *ServeMux) ServeMsg(ctx *Context) {
 	} else {
 		handlers := mux.getEventHandlerChain(ctx.MixedMsg.EventType)
 		if len(handlers) == 0 {
-			ctx.ResponseWriter.Write(successResponseBytes)
+			//ctx.ResponseWriter.Write(successResponseBytes)
+			ctx.HttpCtx.Write(successResponseBytes)
 			return
 		}
 		ctx.handlers = handlers
